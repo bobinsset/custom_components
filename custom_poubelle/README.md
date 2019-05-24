@@ -6,5 +6,6 @@ Dans Configuration.yaml ajouter dans la partie sensor
     jour_paire: "poubelle grise + carton"
     jour_impaire: "poubelle grise + jaune"
     jour: 2 # 1 = Lundi , 7 = Dimanche
-    icon: 'mdi:delete' ``
+    icon: 'mdi:delete' 
+    ``
        
