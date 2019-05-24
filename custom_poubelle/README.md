@@ -1,4 +1,4 @@
-# sortir les poublelles
+# sortir les poubelles
 Utilisation : 
 Dans Configuration.yaml ajouter dans la partie sensor
 
