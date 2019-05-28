@@ -27,28 +27,22 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Configure the platform and add the Poubelle sensor."""
     now = date.today()
-    numero_jour = now.isoweekday()
-    numero_semaine = now.strftime("%V")
-
+    icon = config[CONF_ICON]
     poubelle_paire = config[CONF_JOUR_PAIRE]
     poubelle_impaire = config[CONF_JOUR_IMPAIRE]
     jour = config[CONF_JOUR]
-    icon = config[CONF_ICON]
-
-    devices = [PoubelleSensor('Poubelle de la semaine', numero_jour,jour,numero_semaine,poubelle_paire,poubelle_impaire,icon)]
+    devices = [PoubelleSensor('Poubelle de la semaine', poubelle_paire,poubelle_impaire,jour,icon)]
     add_entities(devices, True)
 
 class PoubelleSensor(Entity):
-    """Representation of a sensor entity for Linky."""
+    """Representation of a sensor entity for poubelle."""
 
-    def __init__(self, name, numero_jour,jour,numero_semaine,poubelle_paire,poubelle_impaire,icon):
+    def __init__(self, name, poubelle_paire,poubelle_impaire,jour,icon):
         """Initialize the sensor."""
         self._name = name
-        self._numero_jour = numero_jour
-        self._jour = jour
-        self._numero_semaine = numero_semaine
         self._poubelle_paire = poubelle_paire
         self._poubelle_impaire = poubelle_impaire
+        self._jour = jour
         self._state = None
         self._icon = icon
 
@@ -72,7 +66,6 @@ class PoubelleSensor(Entity):
         """Return icon."""
         return self._icon
 
-    @Throttle(SCAN_INTERVAL)
     def update(self):
         now = date.today()
         numero_jour = now.isoweekday()
@@ -88,3 +81,4 @@ class PoubelleSensor(Entity):
             self._state = self._poubelle_paire
         elif (int(numero_semaine) % 2) != 0 and numero_jour <= self._jour:
             self._state = self._poubelle_impaire
+        _LOGGER.debug("Poubelle update")
