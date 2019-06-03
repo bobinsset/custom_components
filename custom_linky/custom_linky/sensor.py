@@ -16,10 +16,11 @@ _LOGGER = logging.getLogger(__name__)
 
 SCAN_INTERVAL = timedelta(minutes=10)
 DEFAULT_TIMEOUT = 10
-
+CONF_PRIX = 'prix'
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_USERNAME): cv.string,
     vol.Required(CONF_PASSWORD): cv.string,
+    vol.Optional(CONF_PRIX): cv.string,
     vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): cv.positive_int,
 })
 
@@ -29,7 +30,8 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     username = config[CONF_USERNAME]
     password = config[CONF_PASSWORD]
     timeout = config[CONF_TIMEOUT]
-
+    prix = config[CONF_PRIX]
+    _LOGGER.debug("prix : "+ str(prix))
     from pylinky.client import LinkyClient, PyLinkyError
     client = LinkyClient(username, password, None, timeout)
     try:
@@ -40,13 +42,22 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         client.close_session()
         return
 
-    devices = [LinkySensor('Linky / hier', client, 'daily')]
+    devices = [LinkySensor('Linky / hier', client, 'daily','compteur', None)]
     add_entities(devices, True)
 
-    devices = [LinkySensor('Linky / Mois Current', client,"monthly")]
+    devices = [LinkySensor('Linky / Mois Current', client,"monthly",'compteur',None)]
     add_entities(devices, True)
 
-    devices = [LinkySensor('Linky / Année Current', client, "yearly")]
+    devices = [LinkySensor('Linky / Année Current', client, "yearly",'compteur',None)]
+    add_entities(devices, True)
+
+    devices = [LinkySensor('Prix / hier', client, 'daily','prix',prix)]
+    add_entities(devices, True)
+
+    devices = [LinkySensor('Prix / Mois Current', client, "monthly",'prix',prix)]
+    add_entities(devices, True)
+
+    devices = [LinkySensor('prix / Année Current', client, "yearly",'prix',prix)]
     add_entities(devices, True)
     # devices = []
     # devices.append(LinkySensor('Linky / hier', client, 'daily'))
@@ -57,12 +68,14 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 class LinkySensor(Entity):
     """Representation of a sensor entity for Linky."""
 
-    def __init__(self, name, client,periode):
+    def __init__(self, name, client,periode,type,prix):
         """Initialize the sensor."""
         self._name = name
         self._client = client
         self._state = None
         self._periode = periode
+        self._type = type
+        self._prix = prix
 
     @property
     def name(self):
@@ -77,7 +90,10 @@ class LinkySensor(Entity):
     @property
     def unit_of_measurement(self):
         """Return the unit of measurement."""
-        return ENERGY_KILO_WATT_HOUR
+        if self._type == 'compteur':
+            return ENERGY_KILO_WATT_HOUR
+        else:
+            return "€"
 
     @Throttle(SCAN_INTERVAL)
     def update(self):
@@ -97,7 +113,12 @@ class LinkySensor(Entity):
 
         if self._client.get_data():
             # get the last past day data
-            self._state = self._client.get_data()[self._periode][-derniere]['conso']
+            if self._type == 'compteur':
+                self._state = self._client.get_data()[self._periode][-derniere]['conso']
+            elif self._type == 'prix':
+                total = float(self._prix) * float(self._client.get_data()[self._periode][-derniere]['conso'])
+                _LOGGER.debug("total :" + str(round(float(total),3)))
+                self._state = round(float(total),3)
         else:
             self._state = None
         _LOGGER.debug(" update linky " + str(self._periode) + str(" : ") + str(self._client.get_data()[self._periode][-derniere]['conso']))
